@@ -16,7 +16,7 @@ from telegram.ext import (
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
 AUTHORIZED_USERS = set()
-
+print("Loaded Token:", os.getenv("BOT_TOKEN"))  # تأكد من تحميل التوكن
 # لوجز
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
