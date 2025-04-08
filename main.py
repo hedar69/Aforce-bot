@@ -13,10 +13,10 @@ from telegram.ext import (
     filters
 )
 # إعدادات
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = "7830664951:AAHr098FVA5FSbNAImVN3YsF4RqmfIbE1wI"
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
 AUTHORIZED_USERS = set()
-print("Loaded Token:", os.getenv("BOT_TOKEN"))  # تأكد من تحميل التوكن
+
 # لوجز
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
