@@ -1,108 +1,136 @@
 import os
 import logging
 import random
+import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from binance.client import Client
 
-# Load environment variables
+# Telegram Bot Token from Environment
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
-BINANCE_SECRET_KEY = os.getenv("BINANCE_SECRET_KEY")
-
-# Binance client setup
-binance_client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY)
-
-# Security setup
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
 AUTHORIZED_USERS = set()
 
-# Logging setup
+# Setup Logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Start command
+# CoinGecko Endpoint
+COINGECKO_API = "https://api.coingecko.com/api/v3"
+
+# Helper: Get Coin Price
+def get_price(coin_id="bitcoin"):
+    url = f"{COINGECKO_API}/simple/price?ids={coin_id}&vs_currencies=usd"
+    response = requests.get(url).json()
+    return response.get(coin_id, {}).get("usd", None)
+
+# Helper: Get Market Data
+def get_market_data(coin_id="bitcoin"):
+    url = f"{COINGECKO_API}/coins/markets?vs_currency=usd&ids={coin_id}"
+    response = requests.get(url).json()
+    return response[0] if response else {}
+
+# /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id in AUTHORIZED_USERS:
-        await update.message.reply_text("أهلاً بك مجددًا في AFORCE! أرسل /scan لتحليل السوق.")
+        await update.message.reply_text("مرحبًا بك مجددًا في AForce! استخدم /scan أو /deal لبدء التحليل.")
     else:
-        await update.message.reply_text("مرحبًا بك في AFORCE!\nالرجاء إدخال رمز الدخول:")
+        await update.message.reply_text("أهلًا بك في AForce!\nيرجى إدخال رمز الدخول لتفعيل الحساب.")
 
-# Code verification
+# Handle secret code
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    message = update.message.text.strip()
+    msg = update.message.text.strip()
 
     if user_id in AUTHORIZED_USERS:
         return
 
-    if message == SECRET_CODE:
+    if msg == SECRET_CODE:
         AUTHORIZED_USERS.add(user_id)
-        await update.message.reply_text("تم التفعيل! أرسل /scan لتحصل على التحليل.")
+        await update.message.reply_text("تم التفعيل بنجاح! استخدم /scan أو /deal للبدء.")
     else:
-        await update.message.reply_text("رمز خاطئ، حاول مرة أخرى.")
+        await update.message.reply_text("رمز خاطئ. حاول مرة أخرى.")
 
-# Scan command (smart analysis)
+# /scan command
 async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in AUTHORIZED_USERS:
-        await update.message.reply_text("أرسل رمز الدخول أولاً.")
+        await update.message.reply_text("أرسل رمز الدخول أولًا.")
         return
 
-    coin = "BTCUSDT"
-    try:
-        data = binance_client.get_ticker(symbol=coin)
-        price = float(data['lastPrice'])
-    except:
-        price = round(random.uniform(50000, 65000), 2)
+    coin_id = "bitcoin"
+    data = get_market_data(coin_id)
+    price = data.get("current_price", 0)
+    change = data.get("price_change_percentage_24h", 0)
+    volume = data.get("total_volume", 0)
 
-    price_move = round(random.uniform(-2, 3), 2)
-    whale_action = random.choice(["دخول سيولة", "بيع ضخم", "هدوء"])
-    news = random.choice(["موافقة ETF", "تحذير SEC", "إدراج جديد", "لا يوجد شيء مهم"])
+    whale = random.choice(["دخول سيولة", "بيع مفاجئ", "هدوء"])
+    news = random.choice(["إدراج جديد", "موافقة ETF", "تحذير SEC", "لا يوجد شيء مهم"])
 
     score = 0
-    if price_move > 1:
+    if change > 2:
         score += 2
-    if whale_action == "دخول سيولة":
-        score += 3
+    if whale == "دخول سيولة":
+        score += 2
     if "ETF" in news:
         score += 2
     if "SEC" in news:
         score -= 2
 
-    recommendation = "توصية شراء قوية" if score >= 4 else "تحذير: المخاطرة عالية"
+    result = "توصية شراء قوية" if score >= 4 else "تحذير: السوق متقلب"
 
     msg = (
         f"**تحليل ذكي AFORCE:**\n"
-        f"العملة: BTC\n"
-        f"السعر الحالي: {price} USDT\n"
-        f"حركة السعر: {price_move}%\n"
-        f"تحرك الحيتان: {whale_action}\n"
+        f"العملة: Bitcoin\n"
+        f"السعر الحالي: {price}$\n"
+        f"التغير اليومي: {round(change,2)}%\n"
+        f"حجم التداول: {round(volume / 1e6, 2)}M$\n"
+        f"تحرك الحيتان: {whale}\n"
         f"الخبر المؤثر: {news}\n"
         f"نقاط التقييم: {score}/5\n"
-        f"النتيجة: {recommendation}"
+        f"النتيجة: {result}"
     )
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
-# Fake /deal command
+# /deal command
 async def deal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in AUTHORIZED_USERS:
-        await update.message.reply_text("أرسل رمز الدخول أولاً.")
+        await update.message.reply_text("أرسل رمز الدخول أولًا.")
         return
 
-    await update.message.reply_text("صفقة جديدة:\nالعملة: OP\nسعر الدخول: 2.20\nالمضاعف: x5\nالبيع عند: 2.68\nالوقت المتوقع: 45 دقيقة")
+    entry = round(random.uniform(0.2, 2), 3)
+    target = round(entry * 1.1, 3)
+    stop = round(entry * 0.95, 3)
 
-# Fake /market command
+    msg = (
+        f"**توصية سكالب سريعة:**\n"
+        f"العملة: PEPE\n"
+        f"سعر الدخول: {entry}$\n"
+        f"الهدف: {target}$\n"
+        f"وقف الخسارة: {stop}$\n"
+        f"الرافعة: x10\n"
+        f"المدة: 15-30 دقيقة\n"
+        f"#AFORCE"
+    )
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+# /market command
 async def market(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in AUTHORIZED_USERS:
-        await update.message.reply_text("أرسل رمز الدخول أولاً.")
+        await update.message.reply_text("أرسل رمز الدخول أولًا.")
         return
 
-    await update.message.reply_text("حركة غير طبيعية على عملة PEPE\nكمية ضخمة دخلت خلال دقائق!")
+    top = ["pepe", "solana", "dogecoin", "bonk"]
+    chosen = random.choice(top)
+    price = get_price(chosen)
 
-# Build bot
+    await update.message.reply_text(
+        f"🚨 عملة ناشطة: {chosen.upper()}\nالسعر الحالي: {price}$\nراقبها خلال الدقائق القادمة!",
+        parse_mode="Markdown"
+    )
+
+# Setup bot
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("scan", scan))
