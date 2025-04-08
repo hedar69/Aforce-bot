@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 # Telegram Bot Token from Environment
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = "7830664951:AAHZKUkf4qlZooy4zfmlOeA2SYXxYfksGQU"
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
 AUTHORIZED_USERS = set()
 
