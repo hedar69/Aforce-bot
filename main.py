@@ -1,48 +1,74 @@
 import os
 import logging
+import random
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+AUTHORIZED_USERS = set()
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
 
-# تخزين المستخدمين المصرح لهم
-authorized_users = set()
+logging.basicConfig(level=logging.INFO)
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# تحليل داخلي وهمي (مثال)
+def internal_analysis():
+    prices = random.uniform(-2, 3)  # حركة سعر
+    whales = random.choice(["دخول سيولة", "بيع ضخم", "هدوء"])
+    news = random.choice(["ETF موافقة", "تحذير SEC", "لا شيء مهم"])
+    
+    score = 0
+    if prices > 1: score += 2
+    if whales == "دخول سيولة": score += 3
+    if "ETF" in news: score += 2
+    if "SEC" in news: score -= 2
+    
+    recommendation = "توصية شراء" if score >= 4 else "انتبه: مخاطرة"
+    
+    return {
+        "الحركة": f"{prices:.2f}%",
+        "الحيتان": whales,
+        "الخبر": news,
+        "التقييم": score,
+        "النتيجة": recommendation
+    }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id in authorized_users:
-        await update.message.reply_text("أهلًا من جديد! جاهز للتوصيات.")
+    if user_id in AUTHORIZED_USERS:
+        await update.message.reply_text("أهلاً من جديد، جاهز للتوصيات.")
     else:
-        await update.message.reply_text("أهلاً! الرجاء إرسال رمز الدخول للمتابعة.")
+        await update.message.reply_text("من فضلك أرسل رمز الدخول:")
 
-async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def check_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
-
-    if user_id in authorized_users:
-        await update.message.reply_text("أنت مصرح مسبقًا.")
-        return
-
     if text == SECRET_CODE:
-        authorized_users.add(user_id)
-        await update.message.reply_text("تم التحقق! مرحبًا بك في Aforce Bot.")
-    else:
-        await update.message.reply_text("رمز الدخول غير صحيح!")
+        AUTHORIZED_USERS.add(user_id)
+        await update.message.reply_text("تم التفعيل، يمكنك الآن استخدام البوت.")
+    elif user_id not in AUTHORIZED_USERS:
+        await update.message.reply_text("رمز خاطئ، حاول مرة أخرى.")
 
-async def secret_area(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def insight(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id in authorized_users:
-        await update.message.reply_text("هاي منطقة خاصة... التوصيات راح توصلك هون!")
-    else:
-        await update.message.reply_text("أنت غير مصرح لك. أرسل رمز الدخول أولاً.")
+    if user_id not in AUTHORIZED_USERS:
+        await update.message.reply_text("أنت غير مصرح. أرسل الرمز أولًا.")
+        return
+    
+    data = internal_analysis()
+    msg = (
+        f"**تحليل ذكي AFORCE:**\n"
+        f"حركة السعر: {data['الحركة']}\n"
+        f"تحرك الحيتان: {data['الحيتان']}\n"
+        f"الخبر المؤثر: {data['الخبر']}\n"
+        f"نقاط التقييم: {data['التقييم']}/5\n"
+        f"النتيجة: {data['النتيجة']}"
+    )
+    await update.message.reply_text(msg)
 
-app = ApplicationBuilder().token(TOKEN).build()
-
+app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_code))
-app.add_handler(CommandHandler("deal", secret_area))  # أمر لتجريب إرسال توصية سرية
+app.add_handler(CommandHandler("scan", insight))
+app.add_handler(CommandHandler("code", check_code))
+app.add_handler(CommandHandler("check", check_code))  # fallback للرسالة كرمز
 
 app.run_polling()
