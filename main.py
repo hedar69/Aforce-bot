@@ -2,7 +2,16 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+import os
+print("Loaded Token:", os.getenv("BOT_TOKEN"))  # هذا فقط للتأكد، احذفه بعد التجربة
 
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    filters
+)
 # إعدادات
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
