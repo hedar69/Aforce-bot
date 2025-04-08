@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 # إعداد التوكن من Environment Variable مباشرة
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN1")
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
 AUTHORIZED_USERS = set()
 
