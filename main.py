@@ -1,74 +1,76 @@
 import os
 import logging
-import random
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
+# إعدادات
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-AUTHORIZED_USERS = set()
 SECRET_CODE = "gefmiz-Dapbyt-5cejgu"
+AUTHORIZED_USERS = set()
 
-logging.basicConfig(level=logging.INFO)
+# لوجز
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# تحليل داخلي وهمي (مثال)
-def internal_analysis():
-    prices = random.uniform(-2, 3)  # حركة سعر
-    whales = random.choice(["دخول سيولة", "بيع ضخم", "هدوء"])
-    news = random.choice(["ETF موافقة", "تحذير SEC", "لا شيء مهم"])
-    
-    score = 0
-    if prices > 1: score += 2
-    if whales == "دخول سيولة": score += 3
-    if "ETF" in news: score += 2
-    if "SEC" in news: score -= 2
-    
-    recommendation = "توصية شراء" if score >= 4 else "انتبه: مخاطرة"
-    
-    return {
-        "الحركة": f"{prices:.2f}%",
-        "الحيتان": whales,
-        "الخبر": news,
-        "التقييم": score,
-        "النتيجة": recommendation
-    }
-
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id in AUTHORIZED_USERS:
-        await update.message.reply_text("أهلاً من جديد، جاهز للتوصيات.")
+        await update.message.reply_text("أهلاً فيك من جديد، جاهز للتوصيات.")
     else:
-        await update.message.reply_text("من فضلك أرسل رمز الدخول:")
+        await update.message.reply_text("مرحبًا بك في AFORCE!\nالرجاء إدخال رمز الدخول:")
 
-async def check_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# التحقق من الرمز
+async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    text = update.message.text.strip()
-    if text == SECRET_CODE:
+    message = update.message.text.strip()
+
+    if user_id in AUTHORIZED_USERS:
+        return
+
+    if message == SECRET_CODE:
         AUTHORIZED_USERS.add(user_id)
-        await update.message.reply_text("تم التفعيل، يمكنك الآن استخدام البوت.")
-    elif user_id not in AUTHORIZED_USERS:
+        await update.message.reply_text("تم التفعيل! يمكنك الآن استخدام الأوامر.")
+    else:
         await update.message.reply_text("رمز خاطئ، حاول مرة أخرى.")
 
-async def insight(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# /scan - تحليل ذكي
+async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in AUTHORIZED_USERS:
-        await update.message.reply_text("أنت غير مصرح. أرسل الرمز أولًا.")
+        await update.message.reply_text("أرسل رمز الدخول أولاً.")
         return
-    
-    data = internal_analysis()
+
+    import random
+    price_move = round(random.uniform(-2, 3), 2)
+    whale_action = random.choice(["دخول سيولة", "بيع ضخم", "هدوء"])
+    news = random.choice(["موافقة ETF", "تحذير SEC", "إدراج جديد", "لا يوجد شيء مهم"])
+
+    score = 0
+    if price_move > 1:
+        score += 2
+    if whale_action == "دخول سيولة":
+        score += 3
+    if "ETF" in news:
+        score += 2
+    if "SEC" in news:
+        score -= 2
+
+    recommendation = "توصية شراء قوية" if score >= 4 else "تحذير: المخاطرة عالية"
+
     msg = (
         f"**تحليل ذكي AFORCE:**\n"
-        f"حركة السعر: {data['الحركة']}\n"
-        f"تحرك الحيتان: {data['الحيتان']}\n"
-        f"الخبر المؤثر: {data['الخبر']}\n"
-        f"نقاط التقييم: {data['التقييم']}/5\n"
-        f"النتيجة: {data['النتيجة']}"
+        f"حركة السعر: {price_move}%\n"
+        f"تحرك الحيتان: {whale_action}\n"
+        f"الخبر المؤثر: {news}\n"
+        f"نقاط التقييم: {score}/5\n"
+        f"النتيجة: {recommendation}"
     )
     await update.message.reply_text(msg)
 
+# بناء البوت
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("scan", insight))
-app.add_handler(CommandHandler("code", check_code))
-app.add_handler(CommandHandler("check", check_code))  # fallback للرسالة كرمز
+app.add_handler(CommandHandler("scan", scan))
+app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_code))
 
 app.run_polling()
